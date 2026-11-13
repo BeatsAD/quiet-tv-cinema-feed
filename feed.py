@@ -337,15 +337,60 @@ def verify_remote(base, expected):
         raise FeedError("Public image checksum mismatch")
 
 
+def audit(api, now, sample=30):
+    """Inspect real candidates without writing or changing a published snapshot."""
+    if not 1 <= sample <= 100:
+        raise FeedError("Audit sample must be between 1 and 100")
+    day = now.astimezone(ZONE).date()
+    candidates = api.candidates(day)
+    if len(candidates) < sample:
+        raise FeedError("Not enough eligible candidates for the requested audit")
+    items = []
+    for candidate in candidates[:sample]:
+        detail = api.detail(candidate["id"])
+        item = {"id": candidate["id"], "eligible": eligible(detail, day),
+                "chinese": False, "hd_backdrop": False, "jpeg_ready": False}
+        try:
+            try:
+                title, _, _ = chinese(detail)
+            except FeedError:
+                title, _, _ = chinese(detail, api.translations(candidate["id"]))
+            item.update(title=title, chinese=True)
+        except SourceError:
+            raise
+        except FeedError:
+            pass
+        images = ranked_images(api.images(candidate["id"]))
+        item["hd_backdrop"] = bool(images)
+        for image in images[:5]:
+            try:
+                raw = jpeg(api.image(image["file_path"]))
+                item.update(jpeg_ready=True, original_width=image["width"],
+                            original_height=image["height"], jpeg_bytes=len(raw))
+                break
+            except FeedError:
+                continue
+        item["usable"] = all(item[key] for key in ("eligible", "chinese", "jpeg_ready"))
+        items.append(item)
+    return {"content_date": day.isoformat(), "candidate_pool": len(candidates), "sample": len(items),
+            **{key: sum(item[key] for item in items) for key in
+               ("eligible", "chinese", "hd_backdrop", "jpeg_ready", "usable")}, "items": items}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("generate", "verify", "verify-remote"))
+    parser.add_argument("command", choices=("generate", "verify", "verify-remote", "audit"))
     parser.add_argument("--data", type=Path, default=Path("data"))
     parser.add_argument("--token-file", type=Path)
     parser.add_argument("--refresh", action="store_true", help="Publish a new higher revision, even on the same day")
     parser.add_argument("--url")
+    parser.add_argument("--sample", type=int, default=30, help="Number of candidates for the read-only quality audit")
     args = parser.parse_args()
     try:
+        if args.command == "audit":
+            token = args.token_file.read_text().strip() if args.token_file else os.environ.get("TMDB_BEARER_TOKEN", "").strip()
+            print(json.dumps(audit(Tmdb(token), datetime.now(ZONE), args.sample), ensure_ascii=False, indent=2))
+            return 0
         if args.command == "generate":
             # Same-day recovery/deploy works without a fresh upstream request.
             class LazyTmdb:
