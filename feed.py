@@ -1,5 +1,6 @@
 """Automatic Chinese cinema wallpaper feed. No credentials are written to output."""
 import argparse
+import base64
 import hashlib
 import io
 import json
@@ -8,6 +9,8 @@ from pathlib import Path
 import random
 import re
 import sys
+import subprocess
+import tempfile
 from datetime import date, datetime, timedelta
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urljoin, urlparse
@@ -23,6 +26,8 @@ MAX_SITE = 800 * 1024 * 1024
 HAN = re.compile(r"[\u3400-\u9fff]")
 SHA = re.compile(r"[a-f0-9]{64}")
 SIMPLIFY = OpenCC("t2s")
+PUBLIC_KEY = Path(__file__).resolve().parent / "assets/cinema-public-key.der"
+KEY_ID = "quiettv-cinema-1"
 
 
 class FeedError(Exception):
@@ -251,6 +256,46 @@ def atomic(path, data):
     os.replace(temporary, path)
 
 
+def verify_signed(raw, public_key=None):
+    public_key = public_key or PUBLIC_KEY
+    if len(raw) > 256 * 1024:
+        raise FeedError("Signed feed too large")
+    try:
+        envelope = json.loads(raw)
+        if envelope["keyId"] != KEY_ID:
+            raise FeedError("Unknown cinema signing key")
+        payload = base64.b64decode(envelope["payload"], validate=True)
+        signature = base64.b64decode(envelope["signature"], validate=True)
+        with tempfile.NamedTemporaryFile(prefix="cinema-signature-") as temporary:
+            temporary.write(signature)
+            temporary.flush()
+            subprocess.run(["openssl", "dgst", "-sha256", "-verify", str(public_key),
+                            "-keyform", "DER", "-signature", temporary.name], input=payload,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
+        return validate(json.loads(payload))
+    except (KeyError, ValueError, TypeError, subprocess.CalledProcessError):
+        raise FeedError("Invalid cinema signature") from None
+
+
+def sign(root, private_key):
+    root = Path(root)
+    feed = read_json(root / "latest.json")
+    verify_local(root, feed)
+    actual = subprocess.check_output(["openssl", "pkey", "-in", str(private_key), "-pubout", "-outform", "DER"],
+                                     stderr=subprocess.PIPE)
+    if actual != PUBLIC_KEY.read_bytes():
+        raise FeedError("Cinema signing key does not match published public key")
+    payload = encoded(feed)
+    signature = subprocess.run(["openssl", "dgst", "-sha256", "-sign", str(private_key)],
+                               input=payload, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout
+    raw = encoded({"keyId": KEY_ID, "payload": base64.b64encode(payload).decode("ascii"),
+                   "signature": base64.b64encode(signature).decode("ascii")})
+    if verify_signed(raw) != feed:
+        raise FeedError("Signed snapshot differs from latest.json")
+    atomic(root / "latest.signed.json", raw)
+    return feed
+
+
 def generate(root, api, now, refresh=False):
     root = Path(root)
     day = now.astimezone(ZONE).date()
@@ -332,6 +377,9 @@ def verify_remote(base, expected):
     published = validate(json.loads(fetch(urljoin(base, "latest.json") + "?revision=" + str(expected["revision"]), 256 * 1024)))
     if published != expected:
         raise FeedError("Public feed differs from generated snapshot")
+    signed = verify_signed(fetch(urljoin(base, "latest.signed.json") + "?revision=" + str(expected["revision"]), 256 * 1024))
+    if signed != expected:
+        raise FeedError("Public signed feed differs from generated snapshot")
     raw = fetch(urljoin(base, published["image"]["path"]), MAX_IMAGE)
     if len(raw) != published["image"]["bytes"] or hashlib.sha256(raw).hexdigest() != published["image"]["sha256"]:
         raise FeedError("Public image checksum mismatch")
@@ -379,9 +427,10 @@ def audit(api, now, sample=30):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("generate", "verify", "verify-remote", "audit"))
+    parser.add_argument("command", choices=("generate", "sign", "verify", "verify-remote", "audit"))
     parser.add_argument("--data", type=Path, default=Path("data"))
     parser.add_argument("--token-file", type=Path)
+    parser.add_argument("--signing-key-file", type=Path)
     parser.add_argument("--refresh", action="store_true", help="Publish a new higher revision, even on the same day")
     parser.add_argument("--url")
     parser.add_argument("--sample", type=int, default=30, help="Number of candidates for the read-only quality audit")
@@ -391,7 +440,18 @@ def main():
             token = args.token_file.read_text().strip() if args.token_file else os.environ.get("TMDB_BEARER_TOKEN", "").strip()
             print(json.dumps(audit(Tmdb(token), datetime.now(ZONE), args.sample), ensure_ascii=False, indent=2))
             return 0
-        if args.command == "generate":
+        if args.command == "sign":
+            if args.signing_key_file:
+                feed = sign(args.data, args.signing_key_file)
+            else:
+                secret = os.environ.get("CINEMA_SIGNING_KEY", "").strip()
+                if not secret:
+                    raise FeedError("CINEMA_SIGNING_KEY or --signing-key-file is required")
+                with tempfile.NamedTemporaryFile(mode="w", prefix="cinema-private-key-") as temporary:
+                    temporary.write(secret + "\n")
+                    temporary.flush()
+                    feed = sign(args.data, Path(temporary.name))
+        elif args.command == "generate":
             # Same-day recovery/deploy works without a fresh upstream request.
             class LazyTmdb:
                 def __getattr__(self, name):
@@ -401,12 +461,14 @@ def main():
         else:
             feed = read_json(args.data / "latest.json")
             verify_local(args.data, feed)
+            if verify_signed((args.data / "latest.signed.json").read_bytes()) != feed:
+                raise FeedError("Signed snapshot differs from latest.json")
             if args.command == "verify-remote":
                 if not args.url:
                     raise FeedError("--url is required")
                 verify_remote(args.url, feed)
         print(f"Verified revision {feed['revision']} for {feed['content_date']} (TMDB {feed['movie']['id']})")
-    except (FeedError, OSError, ValueError, KeyError) as error:
+    except (FeedError, OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
         print("Feed failed: " + str(error), file=sys.stderr)
         return 1
     return 0

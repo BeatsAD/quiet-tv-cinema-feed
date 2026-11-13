@@ -10,19 +10,20 @@
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python feed.py generate --token-file /绝对路径/私有令牌文件
+.venv/bin/python feed.py sign --signing-key-file /绝对路径/私有签名密钥.pem
 .venv/bin/python feed.py verify
 ```
 
-线上入口：[每日电影](https://beatsad.github.io/quiet-tv-cinema-feed/)  [客户端清单](https://beatsad.github.io/quiet-tv-cinema-feed/latest.json)。
+线上入口：[每日电影](https://beatsad.github.io/quiet-tv-cinema-feed/)  [签名清单](https://beatsad.github.io/quiet-tv-cinema-feed/latest.signed.json)。
 
 1. 把源码发布到独立仓库 `quiet-tv-cinema-feed` 的 `main`。
-2. 在 Settings → Secrets and variables → Actions 配置 `TMDB_BEARER_TOKEN`。
+2. 在 Settings → Secrets and variables → Actions 配置 `TMDB_BEARER_TOKEN`，以及专用 RSA 私钥 `CINEMA_SIGNING_KEY`。私钥须与 `assets/cinema-public-key.der` 匹配，仅保存于维护者私有文件和 Actions Secret，不复用软件更新签名私钥。
 3. Settings → Pages → Source 选择 GitHub Actions。允许工作流写入 `feed-data` 分支；`main` 仍通过 PR 和 Validate 管理。
-4. 手动运行一次 Daily cinema feed，确认生成、部署和公网校验均成功。客户端地址为 `https://<用户名>.github.io/quiet-tv-cinema-feed/latest.json`。
+4. 手动运行一次 Daily cinema feed，确认生成、部署和公网校验均成功。新版客户端地址为 `https://<用户名>.github.io/quiet-tv-cinema-feed/latest.signed.json`。原 `latest.json` 保留供已有客户端和说明页使用。
 
 每天北京时间 05:17 和 07:17 自动执行。同一天第二次运行复用完整快照，继续尝试部署；不会因为先前已经生成、但部署失败而跳过发布。GitHub 定时任务可能延迟或被取消，客户端前台每小时检查清单，休眠后恢复时补查，不依赖精确定时唤醒。
 
-生成内容和去重历史保存在 `feed-data`，源码在 `main`。发布目录只包含 `latest.json`、`days/`、`images/`、说明页与 TMDB 标识，不暴露内部状态、Git 元数据或令牌。流水线使用官方 Pages 上传和部署动作，不依赖提交触发 Pages 构建。PR 检查不读取密钥。
+生成内容和去重历史保存在 `feed-data`，源码在 `main`。发布目录只包含 `latest.json`、`latest.signed.json`、`days/`、`images/`、说明页与 TMDB 标识，不暴露内部状态、Git 元数据或令牌。流水线使用官方 Pages 上传和部署动作，不依赖提交触发 Pages 构建。PR 检查不读取密钥。
 
 ## 内容与质量
 
@@ -39,12 +40,14 @@ python3 -m venv .venv
 
 客户端只在图片完整下载、原字节校验成功且后台操作仍有效后提交图片和文字；离线保留上一张。平台兼容性由 Quiet TV 的既有 JPEG 导入与 TLS 实现承担。
 
+`latest.signed.json` 使用 `keyId: quiettv-cinema-1`、Base64 `payload` 和 `signature`；payload 为原 V1 清单的 UTF-8 字节，以独立 RSA 密钥使用 SHA256withRSA 签名。工作流在保存内容和部署前验签，部署后再次核对线上签名及图片。相同内容重复签名不改变 revision、原清单或图片。
+
 ## 验证与限制
 
 本地测试放在 `tests/`，不随 Quiet TV 源码公开策略自动发布；运行 `.venv/bin/python -m unittest discover -s tests -v`。公开 Validate 检查生产脚本语法、依赖和命令入口，不调用 TMDB。真实选片需要有效令牌；部署后工作流验证公网 JSON 与图片 SHA-256。
 
 维护者可手动运行 Daily cinema feed 并勾选 `audit`，抽查 30 部真实候选的中文资料、原生高清横图及实际 JPEG 解码结果。统计显示在工作流日志中，不输出令牌、完整剧情或图片字节，不改变当天选片。定时任务默认不运行这项抽查。本地等价命令为 `.venv/bin/python feed.py audit --sample 30 --token-file /绝对路径/私有令牌文件`。
 
-中国大陆访问 GitHub Pages 的表现取决于网络，不能把单次电脑连通视为所有电视可用。首期保留旧背景和错误提示；需要更稳定的分发时可将完整站点同步到自有静态存储并在客户端构建时配置 HTTPS 地址。
+中国大陆访问 GitHub Pages 的表现取决于网络，不能把单次电脑连通视为所有电视可用。新版 Quiet TV 的电影清单与图片沿用软件更新的镜像顺序：ghfast.top、gh-proxy.com、v4.gh-proxy.org，随后尝试 Pages、GitHub Raw。镜像读取本仓库 `feed-data` 分支，无需自有域名。两个已验签响应优先采用较新 revision；失败或校验错误自动换源，全部失败保留旧背景。镜像是第三方公共线路，不能保证所有地区持续可用。自有静态源须同步签名清单与图片，并在客户端构建时配置 HTTPS 地址；自定义源不会被发送到公共镜像。
 
 本项目通过 API 使用 TMDB 数据，使用前核对 [TMDB 使用条款](https://www.themoviedb.org/terms-of-use) 与 [API FAQ](https://developer.themoviedb.org/docs/faq)。This product uses the TMDB API but is not endorsed or certified by TMDB. API 可用不代表取得海报或剧照的再分发权，图片版权属于各自权利人；公开图像托管须按实际用途核对授权。

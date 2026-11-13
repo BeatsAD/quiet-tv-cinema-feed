@@ -59,6 +59,7 @@ jobs:
       - name: Generate or reuse complete daily snapshot
         env:
           TMDB_BEARER_TOKEN: ${{ secrets.TMDB_BEARER_TOKEN }}
+          CINEMA_SIGNING_KEY: ${{ secrets.CINEMA_SIGNING_KEY }}
           REFRESH: ${{ inputs.refresh }}
         run: |
           if [ "$REFRESH" = true ]; then
@@ -66,6 +67,7 @@ jobs:
           else
             .venv/bin/python feed.py generate --data data
           fi
+          .venv/bin/python feed.py sign --data data
           .venv/bin/python feed.py verify --data data
       - name: Audit Chinese metadata and full-HD backdrops
         if: inputs.audit == true
@@ -78,7 +80,7 @@ jobs:
         run: |
           git -C data config user.name github-actions[bot]
           git -C data config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git -C data add -- latest.json state.json days images
+          git -C data add -- latest.json latest.signed.json state.json days images
           if ! git -C data diff --cached --quiet; then
             git -C data commit -m '更新每日电影内容'
             git -C data -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin HEAD:feed-data
@@ -87,6 +89,7 @@ jobs:
         run: |
           mkdir site
           cp data/latest.json site/latest.json
+          cp data/latest.signed.json site/latest.signed.json
           cp -R data/days site/days
           cp -R data/images site/images
           cp index.html site/index.html
