@@ -9,6 +9,10 @@ on:
         description: Generate a new higher revision even if today's snapshot exists
         type: boolean
         default: false
+      audit:
+        description: Inspect 30 real TMDB candidates without changing today's selection
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -63,6 +67,11 @@ jobs:
             .venv/bin/python feed.py generate --data data
           fi
           .venv/bin/python feed.py verify --data data
+      - name: Audit Chinese metadata and full-HD backdrops
+        if: inputs.audit == true
+        env:
+          TMDB_BEARER_TOKEN: ${{ secrets.TMDB_BEARER_TOKEN }}
+        run: .venv/bin/python feed.py audit --sample 30
       - name: Save successful generation independently of deployment
         env:
           GH_TOKEN: ${{ github.token }}

@@ -13,6 +13,8 @@ python3 -m venv .venv
 .venv/bin/python feed.py verify
 ```
 
+线上入口：[每日电影](https://beatsad.github.io/quiet-tv-cinema-feed/)  [客户端清单](https://beatsad.github.io/quiet-tv-cinema-feed/latest.json)。
+
 1. 把源码发布到独立仓库 `quiet-tv-cinema-feed` 的 `main`。
 2. 在 Settings → Secrets and variables → Actions 配置 `TMDB_BEARER_TOKEN`。
 3. Settings → Pages → Source 选择 GitHub Actions。允许工作流写入 `feed-data` 分支；`main` 仍通过 PR 和 Validate 管理。
@@ -40,6 +42,8 @@ python3 -m venv .venv
 ## 验证与限制
 
 本地测试放在 `tests/`，不随 Quiet TV 源码公开策略自动发布；运行 `.venv/bin/python -m unittest discover -s tests -v`。公开 Validate 检查生产脚本语法、依赖和命令入口，不调用 TMDB。真实选片需要有效令牌；部署后工作流验证公网 JSON 与图片 SHA-256。
+
+维护者可手动运行 Daily cinema feed 并勾选 `audit`，抽查 30 部真实候选的中文资料、原生高清横图及实际 JPEG 解码结果。统计显示在工作流日志中，不输出令牌、完整剧情或图片字节，不改变当天选片。定时任务默认不运行这项抽查。本地等价命令为 `.venv/bin/python feed.py audit --sample 30 --token-file /绝对路径/私有令牌文件`。
 
 中国大陆访问 GitHub Pages 的表现取决于网络，不能把单次电脑连通视为所有电视可用。首期保留旧背景和错误提示；需要更稳定的分发时可将完整站点同步到自有静态存储并在客户端构建时配置 HTTPS 地址。
 
