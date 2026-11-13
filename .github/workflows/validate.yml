@@ -15,3 +15,4 @@ jobs:
           .venv/bin/pip install -r requirements.txt
           .venv/bin/python -m py_compile feed.py
           .venv/bin/python feed.py --help
+          openssl pkey -pubin -inform DER -in assets/cinema-public-key.der -noout
