@@ -1,0 +1,94 @@
+name: Daily cinema feed
+
+on:
+  schedule:
+    - cron: '17 21,23 * * *'
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: Generate a new higher revision even if today's snapshot exists
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cinema-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install generator dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -r requirements.txt
+      - name: Restore generated history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git init -b feed-data data
+          git -C data remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/feed-data" > "$RUNNER_TEMP/feed-ref.json" 2> "$RUNNER_TEMP/feed-ref-error"; then
+            git -C data -c credential.helper= -c 'credential.helper=!gh auth git-credential' fetch --depth=1 origin feed-data
+            git -C data checkout -B feed-data FETCH_HEAD
+          elif ! gh api "repos/$GITHUB_REPOSITORY/branches" --paginate --jq '.[].name' > "$RUNNER_TEMP/branches"; then
+            exit 1
+          elif grep -Fxq feed-data "$RUNNER_TEMP/branches"; then
+            cat "$RUNNER_TEMP/feed-ref-error"
+            exit 1
+          fi
+      - name: Generate or reuse complete daily snapshot
+        env:
+          TMDB_BEARER_TOKEN: ${{ secrets.TMDB_BEARER_TOKEN }}
+          REFRESH: ${{ inputs.refresh }}
+        run: |
+          if [ "$REFRESH" = true ]; then
+            .venv/bin/python feed.py generate --data data --refresh
+          else
+            .venv/bin/python feed.py generate --data data
+          fi
+          .venv/bin/python feed.py verify --data data
+      - name: Save successful generation independently of deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git -C data config user.name github-actions[bot]
+          git -C data config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git -C data add -- latest.json state.json days images
+          if ! git -C data diff --cached --quiet; then
+            git -C data commit -m '更新每日电影内容'
+            git -C data -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin HEAD:feed-data
+          fi
+      - name: Prepare public site without internal state or Git metadata
+        run: |
+          mkdir site
+          cp data/latest.json site/latest.json
+          cp -R data/days site/days
+          cp -R data/images site/images
+          cp index.html site/index.html
+          cp assets/tmdb.svg site/tmdb.svg
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: site
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        id: deployment
+      - name: Verify public JSON and image checksum
+        env:
+          PUBLIC_URL: ${{ steps.deployment.outputs.page_url }}
+        run: .venv/bin/python feed.py verify-remote --data data --url "$PUBLIC_URL"
