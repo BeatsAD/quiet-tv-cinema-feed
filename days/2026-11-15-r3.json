@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "revision": 3,
+  "content_date": "2026-11-15",
+  "timezone": "Asia/Shanghai",
+  "published_at": "2026-11-15T09:04:55.227894+08:00",
+  "movie": {
+    "provider": "tmdb",
+    "id": 458220,
+    "title": "帕玛",
+    "year": 2021,
+    "overview": "在坐牢12年后，前高中橄榄球明星埃迪·帕尔默回到了家乡，开始全新的生活。他和来自一个麻烦家庭的弃儿山姆建立了一种意想不到的联系，但埃迪的过去威胁到他的新生活和家庭。",
+    "summary": "在坐牢12年后，前高中橄榄球明星埃迪·帕尔默回到了家乡，开始全新的生活。他和来自一个麻烦家庭的弃儿山姆建立了一种意想不到的联系，但埃迪的过去威胁到他的新生活和家庭。",
+    "text_locale": "zh-CN",
+    "rating": {
+      "provider": "TMDB",
+      "value": 8.1,
+      "vote_count": 2030
+    },
+    "source_url": "https://www.themoviedb.org/movie/458220"
+  },
+  "image": {
+    "path": "images/458220/ac41a735454cf33f12f2ee511a14de01bbc5ba2e40b085ebbcab6784321f5fa1.jpg",
+    "width": 1920,
+    "height": 1080,
+    "bytes": 495421,
+    "sha256": "ac41a735454cf33f12f2ee511a14de01bbc5ba2e40b085ebbcab6784321f5fa1"
+  }
+}

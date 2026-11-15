@@ -1,29 +1,29 @@
 {
   "schema_version": 1,
-  "revision": 2,
-  "content_date": "2026-11-14",
+  "revision": 3,
+  "content_date": "2026-11-15",
   "timezone": "Asia/Shanghai",
-  "published_at": "2026-11-14T09:28:03.530670+08:00",
+  "published_at": "2026-11-15T09:04:55.227894+08:00",
   "movie": {
     "provider": "tmdb",
-    "id": 293660,
-    "title": "死侍",
-    "year": 2016,
-    "overview": "油嘴滑舌的雇佣兵韦德·威尔逊与瓦妮莎相识相爱，原本混乱的人生也第一次有了真正想要珍惜的未来。然而就在两人感情最幸福的时候，韦德被诊断出晚期癌症。走投无路之下，他接受了一个神秘组织提出的实验治疗，却在那里遭受了漫长而残酷的折磨。实验最终激发出韦德惊人的自愈能力，同时也令他严重毁容。无法以如今的模样重新面对瓦妮莎，他选择隐藏自己的身份，并化身为“死侍”，开始追踪那个将自己变成如今模样的男人阿贾克斯，希望找到让自己恢复原貌的方法……",
-    "summary": "油嘴滑舌的雇佣兵韦德·威尔逊与瓦妮莎相识相爱，原本混乱的人生也第一次有了真正想要珍惜的未来。",
+    "id": 458220,
+    "title": "帕玛",
+    "year": 2021,
+    "overview": "在坐牢12年后，前高中橄榄球明星埃迪·帕尔默回到了家乡，开始全新的生活。他和来自一个麻烦家庭的弃儿山姆建立了一种意想不到的联系，但埃迪的过去威胁到他的新生活和家庭。",
+    "summary": "在坐牢12年后，前高中橄榄球明星埃迪·帕尔默回到了家乡，开始全新的生活。他和来自一个麻烦家庭的弃儿山姆建立了一种意想不到的联系，但埃迪的过去威胁到他的新生活和家庭。",
     "text_locale": "zh-CN",
     "rating": {
       "provider": "TMDB",
-      "value": 7.6,
-      "vote_count": 33625
+      "value": 8.1,
+      "vote_count": 2030
     },
-    "source_url": "https://www.themoviedb.org/movie/293660"
+    "source_url": "https://www.themoviedb.org/movie/458220"
   },
   "image": {
-    "path": "images/293660/725e6c0d6dcc89c1672f9672d4b1d21c08c37abf728ceaa4460368bf784379f8.jpg",
+    "path": "images/458220/ac41a735454cf33f12f2ee511a14de01bbc5ba2e40b085ebbcab6784321f5fa1.jpg",
     "width": 1920,
     "height": 1080,
-    "bytes": 353993,
-    "sha256": "725e6c0d6dcc89c1672f9672d4b1d21c08c37abf728ceaa4460368bf784379f8"
+    "bytes": 495421,
+    "sha256": "ac41a735454cf33f12f2ee511a14de01bbc5ba2e40b085ebbcab6784321f5fa1"
   }
 }
