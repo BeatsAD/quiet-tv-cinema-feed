@@ -2,9 +2,8 @@ name: Daily cinema feed
 
 on:
   schedule:
-    # UTC 16:00 is midnight in Asia/Shanghai. Reuse today's snapshot on retries.
-    - cron: '0,15,30,45 16 * * *'
-    - cron: '17 21,23 * * *'
+    # Prepare today and the next three days at 06:17 and 18:17 Asia/Shanghai.
+    - cron: '17 10,22 * * *'
   workflow_dispatch:
     inputs:
       refresh:
@@ -58,16 +57,16 @@ jobs:
             cat "$RUNNER_TEMP/feed-ref-error"
             exit 1
           fi
-      - name: Generate or reuse complete daily snapshot
+      - name: Prepare today and the next three dates
         env:
           TMDB_BEARER_TOKEN: ${{ secrets.TMDB_BEARER_TOKEN }}
           CINEMA_SIGNING_KEY: ${{ secrets.CINEMA_SIGNING_KEY }}
           REFRESH: ${{ inputs.refresh }}
         run: |
           if [ "$REFRESH" = true ]; then
-            .venv/bin/python feed.py generate --data data --refresh
+            .venv/bin/python feed.py prepare --data data --refresh
           else
-            .venv/bin/python feed.py generate --data data
+            .venv/bin/python feed.py prepare --data data
           fi
           .venv/bin/python feed.py sign --data data
           .venv/bin/python feed.py verify --data data
@@ -82,7 +81,7 @@ jobs:
         run: |
           git -C data config user.name github-actions[bot]
           git -C data config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git -C data add -- latest.json latest.signed.json state.json days images
+          git -C data add -- latest.json latest.signed.json state.json days images calendar
           if ! git -C data diff --cached --quiet; then
             git -C data commit -m '更新每日电影内容'
             git -C data -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin HEAD:feed-data
@@ -93,6 +92,7 @@ jobs:
           cp data/latest.json site/latest.json
           cp data/latest.signed.json site/latest.signed.json
           cp -R data/days site/days
+          cp -R data/calendar site/calendar
           cp -R data/images site/images
           cp index.html site/index.html
           cp assets/tmdb.svg site/tmdb.svg

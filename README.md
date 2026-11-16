@@ -9,7 +9,7 @@
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python feed.py generate --token-file /绝对路径/私有令牌文件
+.venv/bin/python feed.py prepare --token-file /绝对路径/私有令牌文件
 .venv/bin/python feed.py sign --signing-key-file /绝对路径/私有签名密钥.pem
 .venv/bin/python feed.py verify
 ```
@@ -21,9 +21,9 @@ python3 -m venv .venv
 3. Settings → Pages → Source 选择 GitHub Actions。允许工作流写入 `feed-data` 分支；`main` 仍通过 PR 和 Validate 管理。
 4. 手动运行一次 Daily cinema feed，确认生成、部署和公网校验均成功。新版客户端地址为 `https://<用户名>.github.io/quiet-tv-cinema-feed/latest.signed.json`。原 `latest.json` 保留供已有客户端和说明页使用。
 
-每天北京时间 00:00 开始自动生成，00:15、00:30、00:45 补发，保留 05:17 和 07:17 两次清晨补发。同一天后续运行复用完整快照，继续尝试部署；不会因为先前已经生成、但部署失败而跳过发布。更新后的 2.0 客户端前台跨过北京时间零点立即检查，内容仍不是今日时每 15 分钟补查，取得今日电影后停止额外补查；休眠或断网后在恢复时继续检查。GitHub 定时任务可能延迟或被取消，00:00 是计划开始时间，不保证准点完成。
+每天北京时间 06:17 和 18:17 准备当日及未来三天的电影，按日期分别发布，已有的日期直接复用。零点不再启动固定补发任务。新版 2.0 客户端联网时预缓存未来三天的已签名清单与图片，前台跨过北京时间零点后只切换到对应日期的本地内容；待机或关机后在恢复时切换。已缓存时无需等待网络或 GitHub 调度，缓存缺失时即时补取，失败保留原背景并每 15 分钟补查。旧客户端继续读取 latest 入口，保留最近一次成功发布时的当日内容，不提前显示未来电影；旧客户端不会获得新版的零点本地切换能力。GitHub 调度仍可能延迟或被取消；超过三天的持续生成故障或设备从未取得预缓存时，仍可能需要联网补取。
 
-生成内容和去重历史保存在 `feed-data`，源码在 `main`。发布目录只包含 `latest.json`、`latest.signed.json`、`days/`、`images/`、说明页与 TMDB 标识，不暴露内部状态、Git 元数据或令牌。流水线使用官方 Pages 上传和部署动作，不依赖提交触发 Pages 构建。PR 检查不读取密钥。
+生成内容和去重历史保存在 `feed-data`，源码在 `main`。发布目录只包含 `latest.json`、`latest.signed.json`、`calendar/`、`days/`、`images/`、说明页与 TMDB 标识，不暴露内部状态、Git 元数据或令牌。流水线使用官方 Pages 上传和部署动作，不依赖提交触发 Pages 构建。PR 检查不读取密钥。
 
 ## 内容与质量
 
@@ -36,7 +36,9 @@ python3 -m venv .venv
 
 ## 数据协议
 
-`latest.json` 含 `schema_version: 1`、单调递增的 `revision`、北京时间 `content_date`、`timezone`、带时区的 `published_at`；`movie` 含 TMDB id、中文标题、年份、简介、短介绍、语言、评分及来源链接；`image` 含同站相对路径、宽高、文件字节数和 SHA-256。历史快照命名 `days/YYYY-MM-DD-r<revision>.json`，图像以 SHA 命名，不覆盖旧字节。
+`calendar/YYYY-MM-DD.signed.json` 为新版按日期请求的独立签名清单，图片与签名格式保持一致。已准备的未来日期直接复用，`--refresh` 只重新选择当前日期。新生成的 revision 使用日期前缀和当日递增序号，保证提前准备未来内容后，刷新今天也不会使明天的版本倒退。首次准备时保留已有当日电影及历史小版本号。
+
+`latest.json` 与 `latest.signed.json` 继续提供最近一次成功发布的兼容入口。`latest.json` 含 `schema_version: 1`、单调递增的 `revision`、北京时间 `content_date`、`timezone`、带时区的 `published_at`；`movie` 含 TMDB id、中文标题、年份、简介、短介绍、语言、评分及来源链接；`image` 含同站相对路径、宽高、文件字节数和 SHA-256。历史快照命名 `days/YYYY-MM-DD-r<revision>.json`，图像以 SHA 命名，不覆盖旧字节。
 
 客户端只在图片完整下载、原字节校验成功且后台操作仍有效后提交图片和文字；离线保留上一张。平台兼容性由 Quiet TV 的既有 JPEG 导入与 TLS 实现承担。
 
