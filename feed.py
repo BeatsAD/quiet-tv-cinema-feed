@@ -277,50 +277,93 @@ def verify_signed(raw, public_key=None):
         raise FeedError("Invalid cinema signature") from None
 
 
+def shift_day(day, offset):
+    return date.fromisoformat(day) + timedelta(days=offset)
+
+
+def prepared_paths(root):
+    root = Path(root)
+    paths = [root / "latest.json"]
+    state = read_json(root / "state.json")
+    if state.get("prepared_day"):
+        paths += [root / "calendar" / f"{shift_day(state['prepared_day'], offset)}.json" for offset in range(4)]
+    return paths
+
+
+def read_snapshot(path):
+    item = read_json(path)
+    if path.parent.name == "calendar" and path.stem != item["content_date"]:
+        raise FeedError("Calendar filename and content date differ")
+    return item
+
+
 def sign(root, private_key):
     root = Path(root)
-    feed = read_json(root / "latest.json")
-    verify_local(root, feed)
     actual = subprocess.check_output(["openssl", "pkey", "-in", str(private_key), "-pubout", "-outform", "DER"],
                                      stderr=subprocess.PIPE)
     if actual != PUBLIC_KEY.read_bytes():
         raise FeedError("Cinema signing key does not match published public key")
-    payload = encoded(feed)
-    signature = subprocess.run(["openssl", "dgst", "-sha256", "-sign", str(private_key)],
-                               input=payload, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout
-    raw = encoded({"keyId": KEY_ID, "payload": base64.b64encode(payload).decode("ascii"),
-                   "signature": base64.b64encode(signature).decode("ascii")})
-    if verify_signed(raw) != feed:
-        raise FeedError("Signed snapshot differs from latest.json")
-    atomic(root / "latest.signed.json", raw)
-    return feed
+    for path in prepared_paths(root):
+        item = read_snapshot(path)
+        verify_local(root, item)
+        payload = encoded(item)
+        signature = subprocess.run(["openssl", "dgst", "-sha256", "-sign", str(private_key)],
+                                   input=payload, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout
+        raw = encoded({"keyId": KEY_ID, "payload": base64.b64encode(payload).decode("ascii"),
+                       "signature": base64.b64encode(signature).decode("ascii")})
+        if verify_signed(raw) != item:
+            raise FeedError("Signed snapshot differs from source JSON")
+        atomic(path.with_name(path.stem + ".signed.json"), raw)
+    return read_json(root / "latest.json")
 
 
-def generate(root, api, now, refresh=False):
+def generate(root, api, now, refresh=False, content_day=None):
     root = Path(root)
-    day = now.astimezone(ZONE).date()
+    day = content_day or now.astimezone(ZONE).date()
     state_path = root / "state.json"
     state = read_json(state_path) if state_path.exists() else {"revision": 0, "history": []}
-    latest_path = root / "latest.json"
+    history_max = max((item["revision"] for item in state["history"]), default=0)
+    if state["revision"] != history_max:
+        raise FeedError("State and generation history differ; repair before publishing")
+    latest_path = root / "latest.json" if content_day is None else root / "calendar" / f"{day}.json"
+    legacy = root / "latest.json"
+    if content_day is None and legacy.exists() and date.fromisoformat(read_json(legacy)["content_date"]) > day:
+        raise FeedError("Refusing to move content date backwards")
+    if content_day is not None and not latest_path.exists() and legacy.exists():
+        previous = read_json(legacy)
+        if previous["content_date"] == day.isoformat() and not refresh:
+            verify_local(root, previous)
+            if not any(item["revision"] == previous["revision"] and item["id"] == previous["movie"]["id"] and item["date"] == previous["content_date"] for item in state["history"]):
+                raise FeedError("Legacy snapshot is missing from generation history")
+            atomic(latest_path, encoded(previous))
+            return previous
+    if content_day is None and (root / "calendar" / f"{day}.json").exists():
+        item = generate(root, api, now, refresh, day)
+        atomic(legacy, encoded(item))
+        return item
     if latest_path.exists():
         latest = read_json(latest_path)
         verify_local(root, latest)
-        if latest["revision"] != state["revision"]:
-            raise FeedError("State and latest revision differ; repair before publishing")
+        if not any(item["revision"] == latest["revision"] and item["id"] == latest["movie"]["id"] and item["date"] == latest["content_date"] for item in state["history"]):
+            raise FeedError("Snapshot and generation history differ; repair before publishing")
         if date.fromisoformat(latest["content_date"]) > day:
             raise FeedError("Refusing to move content date backwards")
         if latest["content_date"] == day.isoformat() and not refresh:
             return latest
-    elif state["revision"]:
+    elif state["revision"] and content_day is None:
         raise FeedError("State exists without latest.json")
     recent = {item["id"] for item in state["history"]
               if date.fromisoformat(item["date"]) >= day - timedelta(days=90)}
+    revision_base = int(day.strftime("%Y%m%d")) * 1000000
+    revision = max(revision_base + 1, max((item["revision"] for item in state["history"] if item["date"] == day.isoformat()), default=0) + 1)
+    if revision >= revision_base + 1000000:
+        raise FeedError("Daily revision range exhausted")
     for candidate in api.candidates(day)[:100]:
         if candidate["id"] in recent:
             continue
         try:
             detail = api.detail(candidate["id"])
-            if not eligible(detail, day):
+            if not eligible(detail, min(day, now.astimezone(ZONE).date())):
                 continue
             try:
                 title, overview, short = chinese(detail)
@@ -341,7 +384,7 @@ def generate(root, api, now, refresh=False):
         except FeedError:
             continue
         digest = hashlib.sha256(raw).hexdigest()
-        feed = validate({"schema_version": 1, "revision": state["revision"] + 1,
+        feed = validate({"schema_version": 1, "revision": revision,
             "content_date": day.isoformat(), "timezone": "Asia/Shanghai", "published_at": now.astimezone(ZONE).isoformat(),
             "movie": {"provider": "tmdb", "id": detail["id"], "title": title,
                       "year": int(detail["release_date"][:4]), "overview": overview, "summary": short,
@@ -349,10 +392,10 @@ def generate(root, api, now, refresh=False):
                       "vote_count": detail["vote_count"]}, "source_url": f'https://www.themoviedb.org/movie/{detail["id"]}'},
             "image": {"path": f"images/{detail['id']}/{digest}.jpg", "width": 1920, "height": 1080,
                       "bytes": len(raw), "sha256": digest}})
-        used = sum(path.stat().st_size for folder in (root / "images", root / "days")
+        used = sum(path.stat().st_size for folder in (root / "images", root / "days", root / "calendar")
                    for path in folder.rglob("*") if path.is_file())
         used += sum(path.stat().st_size for path in (latest_path, state_path) if path.is_file())
-        if used + len(raw) + len(encoded(feed)) * 2 + len(encoded(state)) > MAX_SITE:
+        if used + len(raw) + len(encoded(feed)) * 6 + len(encoded(state)) > MAX_SITE:
             raise FeedError("Feed storage reaches 800 MiB; previous publication retained")
         image_path = root / feed["image"]["path"]
         if image_path.exists():
@@ -362,22 +405,34 @@ def generate(root, api, now, refresh=False):
             atomic(image_path, raw)
         atomic(root / "days" / f"{day.isoformat()}-r{feed['revision']}.json", encoded(feed))
         # Only a successful full run is committed/pushed by the workflow.
-        state = {"revision": feed["revision"], "history": state["history"] +
-                 [{"date": day.isoformat(), "id": detail["id"], "revision": feed["revision"]}]}
+        state = dict(state, revision=max(state["revision"], feed["revision"]), history=state["history"] +
+                     [{"date": day.isoformat(), "id": detail["id"], "revision": feed["revision"]}])
         atomic(latest_path, encoded(feed))
         atomic(state_path, encoded(state))
         return feed
     raise FeedError("No eligible movie with Chinese text and full-HD textless backdrop; previous feed retained")
 
 
-def verify_remote(base, expected):
+def prepare(root, api, now, refresh=False):
+    root = Path(root)
+    day = now.astimezone(ZONE).date()
+    if (root / "latest.json").exists() and date.fromisoformat(read_json(root / "latest.json")["content_date"]) > day:
+        raise FeedError("Refusing to move content date backwards")
+    window = [generate(root, api, now, refresh and offset == 0, day + timedelta(days=offset)) for offset in range(4)]
+    state = read_json(root / "state.json")
+    atomic(root / "state.json", encoded(dict(state, prepared_day=day.isoformat())))
+    atomic(root / "latest.json", encoded(window[0]))
+    return window[0]
+
+
+def verify_remote(base, expected, manifest="latest.json"):
     base = base.rstrip("/") + "/"
     if urlparse(base).scheme != "https":
         raise FeedError("Public URL requires HTTPS")
-    published = validate(json.loads(fetch(urljoin(base, "latest.json") + "?revision=" + str(expected["revision"]), 256 * 1024)))
+    published = validate(json.loads(fetch(urljoin(base, manifest) + "?revision=" + str(expected["revision"]), 256 * 1024)))
     if published != expected:
         raise FeedError("Public feed differs from generated snapshot")
-    signed = verify_signed(fetch(urljoin(base, "latest.signed.json") + "?revision=" + str(expected["revision"]), 256 * 1024))
+    signed = verify_signed(fetch(urljoin(base, manifest.removesuffix(".json") + ".signed.json") + "?revision=" + str(expected["revision"]), 256 * 1024))
     if signed != expected:
         raise FeedError("Public signed feed differs from generated snapshot")
     raw = fetch(urljoin(base, published["image"]["path"]), MAX_IMAGE)
@@ -427,7 +482,7 @@ def audit(api, now, sample=30):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("generate", "sign", "verify", "verify-remote", "audit"))
+    parser.add_argument("command", choices=("generate", "prepare", "sign", "verify", "verify-remote", "audit"))
     parser.add_argument("--data", type=Path, default=Path("data"))
     parser.add_argument("--token-file", type=Path)
     parser.add_argument("--signing-key-file", type=Path)
@@ -451,22 +506,24 @@ def main():
                     temporary.write(secret + "\n")
                     temporary.flush()
                     feed = sign(args.data, Path(temporary.name))
-        elif args.command == "generate":
+        elif args.command in ("generate", "prepare"):
             # Same-day recovery/deploy works without a fresh upstream request.
             class LazyTmdb:
                 def __getattr__(self, name):
                     token = args.token_file.read_text().strip() if args.token_file else os.environ.get("TMDB_BEARER_TOKEN", "").strip()
                     return getattr(Tmdb(token), name)
-            feed = generate(args.data, LazyTmdb(), datetime.now(ZONE), args.refresh)
+            feed = (prepare if args.command == "prepare" else generate)(args.data, LazyTmdb(), datetime.now(ZONE), args.refresh)
         else:
             feed = read_json(args.data / "latest.json")
-            verify_local(args.data, feed)
-            if verify_signed((args.data / "latest.signed.json").read_bytes()) != feed:
-                raise FeedError("Signed snapshot differs from latest.json")
-            if args.command == "verify-remote":
-                if not args.url:
-                    raise FeedError("--url is required")
-                verify_remote(args.url, feed)
+            for path in prepared_paths(args.data):
+                item = read_snapshot(path)
+                verify_local(args.data, item)
+                if verify_signed(path.with_name(path.stem + ".signed.json").read_bytes()) != item:
+                    raise FeedError("Signed snapshot differs from source JSON")
+                if args.command == "verify-remote":
+                    if not args.url:
+                        raise FeedError("--url is required")
+                    verify_remote(args.url, item, path.relative_to(args.data).as_posix())
         print(f"Verified revision {feed['revision']} for {feed['content_date']} (TMDB {feed['movie']['id']})")
     except (FeedError, OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
         print("Feed failed: " + str(error), file=sys.stderr)
