@@ -2,6 +2,8 @@ name: Daily cinema feed
 
 on:
   schedule:
+    # UTC 16:00 is midnight in Asia/Shanghai. Reuse today's snapshot on retries.
+    - cron: '0,15,30,45 16 * * *'
     - cron: '17 21,23 * * *'
   workflow_dispatch:
     inputs:
