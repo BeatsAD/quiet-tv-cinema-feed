@@ -1,29 +1,29 @@
 {
   "schema_version": 1,
-  "revision": 20261118000001,
-  "content_date": "2026-11-18",
+  "revision": 20261119000001,
+  "content_date": "2026-11-19",
   "timezone": "Asia/Shanghai",
   "published_at": "2026-11-16T13:57:47.655676+08:00",
   "movie": {
     "provider": "tmdb",
-    "id": 1007757,
-    "title": "奇幻变身大冒险",
-    "year": 2026,
-    "overview": "森林中的一个小生物和一只高贵的鸟突然互换了身体，他们不得不结伴而行，共同应对此生最疯狂的冒险。",
-    "summary": "森林中的一个小生物和一只高贵的鸟突然互换了身体，他们不得不结伴而行，共同应对此生最疯狂的冒险。",
+    "id": 424694,
+    "title": "波西米亚狂想曲",
+    "year": 2018,
+    "overview": "本片是对皇后乐队、传奇主唱弗雷迪·莫库里以及他们音乐的致敬盛宴，这是一段充满爱、痛苦、接纳和音乐的旅程。弗雷迪·莫库里曾是希思罗机场的一名普通搬运工，对音乐满腔热血的他，与布莱恩·梅、罗杰·泰勒、约 翰·迪肯组成皇后乐队。这个殿堂级乐队的从无到有，从疏离到重聚，从低谷到巅峰，仿佛就是弗雷迪一生的缩影。",
+    "summary": "本片是对皇后乐队、传奇主唱弗雷迪·莫库里以及他们音乐的致敬盛宴，这是一段充满爱、痛苦、接纳和音乐的旅程。",
     "text_locale": "zh-CN",
     "rating": {
       "provider": "TMDB",
-      "value": 8.8,
-      "vote_count": 2303
+      "value": 7.9,
+      "vote_count": 18234
     },
-    "source_url": "https://www.themoviedb.org/movie/1007757"
+    "source_url": "https://www.themoviedb.org/movie/424694"
   },
   "image": {
-    "path": "images/1007757/bf84d4553e956464b2549356d72b297ec9214631511c875e6db95879370f4e3b.jpg",
+    "path": "images/424694/a1002063f687d8c551e835b4a94d2210efe8b4af1105d7f6ea6f149af4d29704.jpg",
     "width": 1920,
     "height": 1080,
-    "bytes": 486257,
-    "sha256": "bf84d4553e956464b2549356d72b297ec9214631511c875e6db95879370f4e3b"
+    "bytes": 568034,
+    "sha256": "a1002063f687d8c551e835b4a94d2210efe8b4af1105d7f6ea6f149af4d29704"
   }
 }
