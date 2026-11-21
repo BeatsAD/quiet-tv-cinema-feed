@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "revision": 20261125000001,
+  "content_date": "2026-11-25",
+  "timezone": "Asia/Shanghai",
+  "published_at": "2026-11-22T01:33:31.904809+08:00",
+  "movie": {
+    "provider": "tmdb",
+    "id": 58,
+    "title": "加勒比海盗2：聚魂棺",
+    "year": 2006,
+    "overview": "迷人的杰克船长又回来了，这次，他遇到了更为强大的敌人——传说中的不死人大卫·琼斯，他驾驶着让人恐惧的“飞行荷兰人”号快船，在速度与装备上，没有任何船能够超越它。杰克船长欠下琼斯一个血债，他必须赶在最后时限到来之前，找到破解的方法，否则他会永远背负血债，并且在余生永远成为琼斯的奴隶。",
+    "summary": "迷人的杰克船长又回来了，这次，他遇到了更为强大的敌人——传说中的不死人大卫·琼斯，他驾驶着让人恐惧的“飞行荷兰人”号快船，在速度与装备上，没有任何船能够超越它。",
+    "text_locale": "zh-CN",
+    "rating": {
+      "provider": "TMDB",
+      "value": 7.4,
+      "vote_count": 17880
+    },
+    "source_url": "https://www.themoviedb.org/movie/58"
+  },
+  "image": {
+    "path": "images/58/16710a1ea4a96cfdafcde91acaf57a5156ac26afd81f5b090383f0f960f8e7f8.jpg",
+    "width": 1920,
+    "height": 1080,
+    "bytes": 692926,
+    "sha256": "16710a1ea4a96cfdafcde91acaf57a5156ac26afd81f5b090383f0f960f8e7f8"
+  }
+}
