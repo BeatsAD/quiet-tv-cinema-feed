@@ -1,29 +1,29 @@
 {
   "schema_version": 1,
-  "revision": 20261122000001,
-  "content_date": "2026-11-22",
+  "revision": 20261123000001,
+  "content_date": "2026-11-23",
   "timezone": "Asia/Shanghai",
-  "published_at": "2026-11-19T02:52:06.573916+08:00",
+  "published_at": "2026-11-20T02:59:44.107221+08:00",
   "movie": {
     "provider": "tmdb",
-    "id": 213,
-    "title": "西北偏北",
-    "year": 1959,
-    "overview": "一位时运不济的纽约广告主管被外国间谍误认为政府特工，为寻求生路被迫展开横跨美国的逃亡之旅。",
-    "summary": "一位时运不济的纽约广告主管被外国间谍误认为政府特工，为寻求生路被迫展开横跨美国的逃亡之旅。",
+    "id": 1212763,
+    "title": "鬼玩人：炼狱",
+    "year": 2026,
+    "overview": "爱丽丝在丈夫骤然离世后深陷悲痛，受邀前往公婆的乡间庄园暂住，试图和丈夫的家人互相慰藉，一同走出丧亲的阴霾。可入住没多久，诡异状况便接连爆发，庄园里怪事频发，身边的亲人举止日渐反常。很快，恶灵诅咒席卷整座宅邸，身边的人一个接一个被侵蚀异化，变成面目焦黑、嗜血狂暴的死徒。她逐渐发现，当年婚礼上许下的婚姻誓言并未随丈夫的死亡消散，反而成了缠绕整个家族的恶灵契约。被困在庄园里的她，必须在亲人彻底沦陷前，在遍地死徒的绝境里拼杀求生。",
+    "summary": "爱丽丝在丈夫骤然离世后深陷悲痛，受邀前往公婆的乡间庄园暂住，试图和丈夫的家人互相慰藉，一同走出丧亲的阴霾。",
     "text_locale": "zh-CN",
     "rating": {
       "provider": "TMDB",
-      "value": 8.0,
-      "vote_count": 4742
+      "value": 7.6,
+      "vote_count": 1968
     },
-    "source_url": "https://www.themoviedb.org/movie/213"
+    "source_url": "https://www.themoviedb.org/movie/1212763"
   },
   "image": {
-    "path": "images/213/9ecb08b3f092bacc916746bdaf760c67e01b7055091a0bf1ec9577bec0896de8.jpg",
+    "path": "images/1212763/2a29819757ccdd8ad1d323788bbb24722cdb898e84fc7ac5619b074711238a42.jpg",
     "width": 1920,
     "height": 1080,
-    "bytes": 262148,
-    "sha256": "9ecb08b3f092bacc916746bdaf760c67e01b7055091a0bf1ec9577bec0896de8"
+    "bytes": 469803,
+    "sha256": "2a29819757ccdd8ad1d323788bbb24722cdb898e84fc7ac5619b074711238a42"
   }
 }
