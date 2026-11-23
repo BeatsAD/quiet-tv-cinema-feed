@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "revision": 20261127000001,
+  "content_date": "2026-11-27",
+  "timezone": "Asia/Shanghai",
+  "published_at": "2026-11-24T06:03:49.339545+08:00",
+  "movie": {
+    "provider": "tmdb",
+    "id": 37165,
+    "title": "楚门的世界",
+    "year": 1998,
+    "overview": "楚门·伯班克过着看似平凡而安稳的生活，却总觉得身边有些事情不太对劲：曾经突然消失的初恋、早已溺水身亡却似乎再次出现的父亲，以及一次次阻止他离开家乡的意外。随着越来越多无法解释的异常发生，楚门开始怀疑自己熟悉的生活并不像表面那样真实，甚至感觉无论走到哪里都有人在注视着自己。为了找到失踪的初恋，也为了弄清隐藏在日常生活背后的真相，他决定不惜一切代价离开这个生活了三十多年的世界……",
+    "summary": "楚门·伯班克过着看似平凡而安稳的生活，却总觉得身边有些事情不太对劲：曾经突然消失的初恋、早已溺水身亡却似乎再次出现的父亲，以及一次次阻止他离开家乡的意外。",
+    "text_locale": "zh-CN",
+    "rating": {
+      "provider": "TMDB",
+      "value": 8.2,
+      "vote_count": 21283
+    },
+    "source_url": "https://www.themoviedb.org/movie/37165"
+  },
+  "image": {
+    "path": "images/37165/47e4cb12da894e6d68c208a70823dc97acde02e7a18beb55ccc686f30e8b5e28.jpg",
+    "width": 1920,
+    "height": 1080,
+    "bytes": 301594,
+    "sha256": "47e4cb12da894e6d68c208a70823dc97acde02e7a18beb55ccc686f30e8b5e28"
+  }
+}
