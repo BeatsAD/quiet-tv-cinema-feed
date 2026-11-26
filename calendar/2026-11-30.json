@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "revision": 20261130000001,
+  "content_date": "2026-11-30",
+  "timezone": "Asia/Shanghai",
+  "published_at": "2026-11-27T03:38:11.774132+08:00",
+  "movie": {
+    "provider": "tmdb",
+    "id": 9023,
+    "title": "小马王",
+    "year": 2002,
+    "overview": "广袤的美国西部地区，野马史比瑞特和他的族群过着平静的生活。然而，当史比瑞特第一次见到人类时，他就被抓去训练成战马。幸好善良的印第安小男孩小溪将史比瑞特从训练营里救了出来，并带他回到了自己部落。在小溪的部落，史比瑞特遇上了斑纹母马小雨。这一次，史比瑞特对回家乡还是留下来感到难以抉择，因为他深深爱上了小雨。小溪察觉出了两匹马的爱情，他决定让他们一起回史比瑞特的家乡。当史比瑞特刚刚依依不舍的和小溪告别后，小溪的部落就遭到了骑兵的袭击。.....",
+    "summary": "广袤的美国西部地区，野马史比瑞特和他的族群过着平静的生活。然而，当史比瑞特第一次见到人类时，他就被抓去训练成战马。",
+    "text_locale": "zh-CN",
+    "rating": {
+      "provider": "TMDB",
+      "value": 7.7,
+      "vote_count": 5100
+    },
+    "source_url": "https://www.themoviedb.org/movie/9023"
+  },
+  "image": {
+    "path": "images/9023/3d92eabcbc5fcb81b3dc8192aa6a31d391cf9a3b80b7f67ac9d090df7324eb69.jpg",
+    "width": 1920,
+    "height": 1080,
+    "bytes": 318784,
+    "sha256": "3d92eabcbc5fcb81b3dc8192aa6a31d391cf9a3b80b7f67ac9d090df7324eb69"
+  }
+}
